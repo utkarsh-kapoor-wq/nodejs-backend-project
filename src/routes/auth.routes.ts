@@ -1,6 +1,6 @@
 import express, { type Router } from 'express';
 import { loginHandler, signupHandlerWithValidation } from '@/controllers/auth.controller';
-import { sendVerificationEmailWithValidation } from '@/controllers/verify.controller';
+import { sendVerificationEmailWithValidation, verifyAccountWithValidation } from '@/controllers/verify.controller';
 
 const router: Router = express.Router();
 
@@ -123,7 +123,7 @@ router.route('/login').post(loginHandler);
  * @openapi
  * /api/auth/verify-account/email-verification:
  *   post:
- *     summary: Verify user account via OTP
+ *     summary: Send verification email with OTP
  *     tags:
  *       - Auth
  *     requestBody:
@@ -142,6 +142,48 @@ router.route('/login').post(loginHandler);
  *                 example: email_verification
  *     responses:
  *       200:
+ *         description: Verification email sent successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: true
+ *                 message:
+ *                   type: string
+ *                   example: Verification email sent successfully
+ *
+ */
+router.route('/verify-account/email-verification').post(sendVerificationEmailWithValidation);
+
+/**
+ * @openapi
+ * /api/auth/verify-account:
+ *   post:
+ *     summary: Verify user account with OTP
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 format: email
+ *                 example: john@example.com
+ *               otp:
+ *                 type: string
+ *                 example: "123456"
+ *               type:
+ *                 type: string
+ *                 example: email_verification
+ *     responses:
+ *       200:
  *         description: Account verified successfully
  *         content:
  *           application/json:
@@ -154,9 +196,33 @@ router.route('/login').post(loginHandler);
  *                 message:
  *                   type: string
  *                   example: Account verified successfully
+ *       400:
+ *         description: Bad Request
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Invalid OTP
+ *       404:
+ *         description: Email not found
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Email not found
  */
-router.route('/verify-account/email-verification').post(sendVerificationEmailWithValidation);
-
-router.route('/verify-account').post();
+router.route('/verify-account').post(verifyAccountWithValidation);
 
 export default router;
