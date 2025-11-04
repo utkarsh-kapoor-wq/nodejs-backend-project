@@ -70,5 +70,3 @@ export const EmailVerificationSchema = z.object({
   email: z.email(),
   type: z.enum(['email_verification', 'reset_password']).default('email_verification'),
 });
-
-export type EmailVerificationInput = z.infer<typeof EmailVerificationSchema>;
