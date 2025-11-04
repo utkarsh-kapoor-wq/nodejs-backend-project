@@ -65,8 +65,19 @@ export const TaskParamsSchema = z.object({
 
 /**
  * Verify OTP Schema
+ * - For validating OTP verification requests
  */
 export const EmailVerificationSchema = z.object({
   email: z.email(),
-  type: z.enum(['email_verification', 'reset_password']).default('email_verification'),
+  type: z.enum(['email_verification', 'reset_password']),
+});
+
+/**
+ * Verify OTP Schema
+ * - For validating resend OTP requests
+ */
+export const verifyOtpSchema = z.object({
+  email: z.email(),
+  otp: z.string().length(6, 'OTP must be 6 digits'),
+  type: z.enum(['email_verification', 'reset_password']),
 });
