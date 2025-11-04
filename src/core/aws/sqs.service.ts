@@ -1,4 +1,3 @@
-// src/core/aws/sqs.service.ts
 import { SendMessageCommand } from '@aws-sdk/client-sqs';
 import { env } from '@/env';
 import logger from '../logger';
