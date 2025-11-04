@@ -23,7 +23,7 @@
   "type": "module",
   "license": "ISC",
   "dependencies": {
-    "aws-sdk": "^2.1692.0",
+    "@aws-sdk/client-sqs": "^3.922.0",
     "bcrypt": "^6.0.0",
     "cors": "2.8.5",
     "dotenv": "17.2.3",
