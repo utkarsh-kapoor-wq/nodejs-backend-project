@@ -1,3 +1,24 @@
+/**
+ * Verify Controller
+ *
+ * Patterns Used:
+ *  - Controller Pattern: Encapsulates verification logic in a dedicated controller.
+ *  - Middleware Pattern: Uses asyncHandler for cleaner async route handling.
+ *  - Validation Pattern: Centralized input validation with Zod schemas.
+ *
+ * @module controllers/verify.controller
+ * @requires express
+ * @requires drizzle-orm
+ * @requires @/db
+ * @requires @/db/schemas
+ * @requires @/core/aws/sqs.service
+ * @requires @/utils/asyncHandler
+ * @requires @/utils/errorHandler
+ * @requires @/utils/validations
+ * @exports sendVerificationEmailWithValidation - Handler to send verification email with validation
+ * @exports verifyAccountWithValidation - Handler to verify account with validation
+ */
+
 import type { Request as ExpressRequest, Response as ExpressResponse } from 'express';
 import { eq, and } from 'drizzle-orm';
 import { sendMessageToQueue } from '@/core/aws/sqs.service';

@@ -1,3 +1,22 @@
+/**
+ * AWS SQS Service
+ * - Sends messages to specified SQS queues
+ *
+ * @module sqs.service
+ * @requires @aws-sdk/client-sqs
+ * @requires @/env
+ * @requires @/core/logger
+ * @requires @/core/aws/aws.config
+ * @exports sendMessageToQueue - Function to send messages to SQS queues
+ *
+ * --- IGNORE ---
+ *
+ * This file is excluded from code coverage as it primarily deals with
+ * configuration and does not contain business logic.
+ *
+ * --- END IGNORE ---
+ */
+
 import { SendMessageCommand } from '@aws-sdk/client-sqs';
 import { env } from '@/env';
 import logger from '../logger';
