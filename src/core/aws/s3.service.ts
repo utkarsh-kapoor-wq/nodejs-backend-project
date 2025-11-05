@@ -1,3 +1,23 @@
+/**
+ * AWS S3 Service
+ * - Uploads log files to specified S3 bucket
+ *
+ * @module s3.service
+ * @requires fs
+ * @requires dotenv
+ * @requires @aws-sdk/client-s3
+ * @requires @/core/logger
+ * @requires @/core/aws/aws.config
+ * @exports uploadLogToS3 - Function to upload log files to S3 bucket
+ *
+ * --- IGNORE ---
+ *
+ * This file is excluded from code coverage as it primarily deals with
+ * configuration and does not contain business logic.
+ *
+ * --- END IGNORE ---
+ */
+
 import fs from 'fs';
 import dotenv from 'dotenv';
 import { PutObjectCommand } from '@aws-sdk/client-s3';

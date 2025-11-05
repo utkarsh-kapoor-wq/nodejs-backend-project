@@ -1,3 +1,23 @@
+/**
+ * AWS Configuration Module
+ * - Configures AWS SDK v3 clients for SQS and S3
+ *
+ * @module aws.config
+ * @requires @aws-sdk/client-sqs
+ * @requires @aws-sdk/client-s3
+ * @requires dotenv
+ * @exports sqsClient - Configured SQS client
+ * @exports s3Client - Configured S3 client
+ * @exports AWS_REGION - AWS region used in configuration
+ *
+ * --- IGNORE ---
+ *
+ * This file is excluded from code coverage as it primarily deals with
+ * configuration and does not contain business logic.
+ *
+ * --- END IGNORE ---
+ */
+
 import { SQSClient } from '@aws-sdk/client-sqs';
 import { S3Client } from '@aws-sdk/client-s3';
 import dotenv from 'dotenv';
