@@ -34,6 +34,15 @@ dotenv.config();
  * @property {string} CORS_URL - Allowed CORS origin URL
  * @property {string} DATABASE_URL - Database connection URL
  * @property {string} LOG_DIR - Directory for log files
+ * @property {string} JWT_SECRET_KEY - Secret key for JWT
+ * @property {string} DB_HOST - Database host
+ * @property {number} DB_PORT - Database port
+ * @property {string} DB_USER - Database user
+ * @property {string} DB_PASSWORD - Database password
+ * @property {string} DB_NAME - Database name
+ * @property {string} AWS_SQS_OTP_QUEUE_URL - AWS SQS OTP queue URL
+ * @property {string} AWS_REGION - AWS region
+ * @property {string} AWS_S3_LOG_BUCKET_NAME - AWS S3 log bucket name
  * @throws Will exit the process if validation fails
  * @returns {object} Validated environment variables
  */
@@ -51,6 +60,7 @@ const envSchema: z.ZodObject = z.object({
   DB_NAME: z.string().min(1, 'DB_NAME must be set'),
   AWS_SQS_OTP_QUEUE_URL: z.url('AWS_SQS_OTP_QUEUE_URL must be a valid URL'),
   AWS_REGION: z.string().default('ap-south-1'),
+  AWS_S3_LOG_BUCKET_NAME: z.string().min(1, 'AWS_S3_LOG_BUCKET_NAME must be set'),
 });
 
 /**
@@ -74,6 +84,7 @@ const validateEnv = () => {
       DB_NAME: process.env.DB_NAME!,
       AWS_SQS_OTP_QUEUE_URL: process.env.AWS_SQS_OTP_QUEUE_URL!,
       AWS_REGION: process.env.AWS_REGION!,
+      AWS_S3_LOG_BUCKET_NAME: process.env.AWS_S3_LOG_BUCKET_NAME!,
     });
   } catch (error) {
     logger.error('Invalid environment variables:');
