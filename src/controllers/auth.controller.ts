@@ -34,6 +34,7 @@ import ErrorHandler from '@/utils/errorHandler';
 import { SignupSchema } from '@/utils/validations';
 import { comparePasswords, hashPassword } from '@/utils/helpers';
 import { generateJWTandSetCookie } from '@/utils/jwt_session';
+import logger from '@/core/logger';
 
 /**
  * Signup Handler
@@ -54,37 +55,80 @@ import { generateJWTandSetCookie } from '@/utils/jwt_session';
 export const signupHandler = asyncHandler(async (req: ExpressRequest, _res: ExpressResponse) => {
   const { username, email, password } = req.body;
 
-  const existingEmail = await db.select().from(users).where(eq(users.email, email));
-  if (existingEmail.length) {
-    throw ErrorHandler.Conflict('Email already in use');
-  }
+  try {
+    // Check for existing email
+    const existingEmailCheck = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.email, email))
+      .limit(1);
 
-  const existingUsername = await db.select().from(users).where(eq(users.username, username));
-  if (existingUsername.length) {
-    throw ErrorHandler.Conflict('Username already in use');
-  }
+    if (existingEmailCheck.length > 0) {
+      throw ErrorHandler.Conflict('Email already in use');
+    }
 
-  const hashedPassword = await hashPassword(password);
+    // Check for existing username
+    const existingUsernameCheck = await db
+      .select({ id: users.id, username: users.username })
+      .from(users)
+      .where(eq(users.username, username))
+      .limit(1);
 
-  /**
-   * Create User in DB
-   * Using Drizzle ORM's insert method
-   * Returns the created user record
-   * Excludes password from the response
-   * Handled by asyncHandler for response formatting
-   */
-  const [createdUser] = await db
-    .insert(users)
-    .values({
-      username,
+    if (existingUsernameCheck.length > 0) {
+      throw ErrorHandler.Conflict('Username already in use');
+    }
+
+    // Hash password
+    const hashedPassword = await hashPassword(password);
+
+    // Create user - PostgreSQL will auto-generate UUID
+    const [createdUser] = await db
+      .insert(users)
+      .values({ username, email, password: hashedPassword, role: 'user', isVerified: false, googleConnected: false })
+      .returning({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        role: users.role,
+        isVerified: users.isVerified,
+        createdAt: users.createdAt,
+      });
+
+    logger.info('User created successfully', {
+      userId: createdUser.id,
+      email: createdUser.email,
+      username: createdUser.username,
+    });
+
+    return Response.created(createdUser, 'User created successfully');
+  } catch (error) {
+    logger.error('Signup error:', {
       email,
-      password: hashedPassword,
-    })
-    .returning();
+      username,
+      error: error instanceof Error ? error.message : 'Unknown error',
+    });
 
-  const { password: _, ...userDetails } = createdUser;
+    if (error instanceof ErrorHandler) {
+      throw error;
+    }
 
-  return Response.created(userDetails, 'User created successfully');
+    // Handle database-specific errors
+    if (error && typeof error === 'object') {
+      const dbError = error as { code?: string; constraint?: string };
+
+      // PostgreSQL unique constraint violation
+      if (dbError.code === '23505') {
+        if (dbError.constraint?.includes('email')) {
+          throw ErrorHandler.Conflict('Email already in use');
+        }
+        if (dbError.constraint?.includes('username')) {
+          throw ErrorHandler.Conflict('Username already in use');
+        }
+      }
+    }
+
+    throw ErrorHandler.InternalServerError('Failed to create user account');
+  }
 });
 
 /**
@@ -107,11 +151,27 @@ export const signupHandlerWithValidation = [validate(data => SignupSchema.parse(
  * - To be implemented with input validation, authentication, and response formatting
  * @exports loginHandler
  */
+// Fix line 108 in your auth.controller.ts
 export const loginHandler = asyncHandler(async (req: ExpressRequest, res: ExpressResponse) => {
   const { email, password } = req.body;
 
-  // check if user exists
-  const userExists = await db.select().from(users).where(eq(users.email, email));
+  // FIX: Select specific columns instead of all columns
+  const userExists = await db
+    .select({
+      id: users.id,
+      username: users.username,
+      email: users.email,
+      password: users.password,
+      role: users.role,
+      profilePictureUrl: users.profilePictureUrl,
+      isVerified: users.isVerified,
+      googleConnected: users.googleConnected,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+    })
+    .from(users)
+    .where(eq(users.email, email));
+
   if (!userExists.length) {
     throw ErrorHandler.AuthError('Invalid email');
   }

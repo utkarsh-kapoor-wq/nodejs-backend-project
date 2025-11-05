@@ -43,7 +43,13 @@ export const sendVerificationEmail = asyncHandler(async (req: ExpressRequest, _r
   const { email, type } = req.body;
 
   // Check if email exists in the database
-  const existingEmail = await db.select().from(users).where(eq(users.email, email));
+  const existingEmail = await db
+    .select({
+      email: users.email,
+    })
+    .from(users)
+    .where(eq(users.email, email));
+
   if (existingEmail.length === 0) {
     throw ErrorHandler.NotFound('Email not found');
   }
@@ -69,13 +75,21 @@ export const sendVerificationEmailWithValidation = [
 export const verifyAccountHandler = asyncHandler(async (req: ExpressRequest, _res: ExpressResponse) => {
   const { email, otp, type } = req.body;
   // Check if email exists in the database
-  const existingEmail = await db.select().from(users).where(eq(users.email, email));
+  const existingEmail = await db
+    .select({
+      email: users.email,
+    })
+    .from(users)
+    .where(eq(users.email, email));
+
   if (existingEmail.length === 0) {
     throw ErrorHandler.NotFound('Email not found');
   }
   // Fetch the user id for the email
   const userId = await db
-    .select()
+    .select({
+      id: users.id,
+    })
     .from(users)
     .where(eq(users.email, email))
     .then(res => res[0].id);

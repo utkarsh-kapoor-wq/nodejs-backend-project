@@ -45,15 +45,27 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
       return next(ErrorHandler.AuthError('Invalid token payload'));
     }
 
-    const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
+    const [user] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        role: users.role,
+        profilePictureUrl: users.profilePictureUrl,
+        isVerified: users.isVerified,
+        googleConnected: users.googleConnected,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .where(eq(users.id, payload.userId))
+      .limit(1);
+
     if (!user) {
       return next(ErrorHandler.AuthError('Invalid token: user not found'));
     }
-
-    const { password: _password, ...userSafe } = user as Record<string, unknown>;
-
     // attach to request (augmenting type via any to avoid type errors)
-    (req as Request & { user?: Record<string, unknown> }).user = userSafe;
+    (req as Request & { user?: Record<string, unknown> }).user = user;
 
     return next();
   } catch {
