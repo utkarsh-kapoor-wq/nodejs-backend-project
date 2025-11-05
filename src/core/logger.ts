@@ -32,6 +32,7 @@
 import fs from 'fs';
 import { createLogger, format, transports } from 'winston';
 import DailyRotateFile from 'winston-daily-rotate-file';
+import { uploadLogToS3 } from './aws/s3.service';
 
 // Use process.env directly to avoid circular dependency with @/env
 const dir = process.env.LOG_DIR ?? './logs';
@@ -83,6 +84,14 @@ const dailyRotateFile: DailyRotateFile = new DailyRotateFile({
   maxSize: '20m',
   maxFiles: '14d',
   format: format.combine(format.errors({ stack: true }), format.timestamp(), format.json()),
+});
+
+dailyRotateFile.on('new', async (filename: string) => {
+  try {
+    await uploadLogToS3(filename);
+  } catch (error) {
+    console.error('Error uploading log file to S3:', error);
+  }
 });
 
 /**
