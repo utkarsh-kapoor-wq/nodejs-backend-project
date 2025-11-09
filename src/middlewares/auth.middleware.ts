@@ -32,8 +32,10 @@ function extractToken(req: Request): string | null {
  * - take token from authorization header or cookie named 'token'
  * - verifies JWT and attaches user object to req.user
  */
+// src/middlewares/auth.middleware.ts
 export async function authMiddleware(req: Request, _res: Response, next: NextFunction) {
   const token = extractToken(req);
+
   if (!token) {
     return next(ErrorHandler.AuthError('Authentication required'));
   }
@@ -45,6 +47,7 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
       return next(ErrorHandler.AuthError('Invalid token payload'));
     }
 
+    // Select specific columns to avoid UUID conversion issues
     const [user] = await db
       .select({
         id: users.id,
@@ -64,11 +67,18 @@ export async function authMiddleware(req: Request, _res: Response, next: NextFun
     if (!user) {
       return next(ErrorHandler.AuthError('Invalid token: user not found'));
     }
-    // attach to request (augmenting type via any to avoid type errors)
+
+    // Attach user to request
     (req as Request & { user?: Record<string, unknown> }).user = user;
 
     return next();
-  } catch {
-    return next(ErrorHandler.AuthError('Invalid or expired token'));
+  } catch (error) {
+    if (error instanceof jwt.JsonWebTokenError) {
+      return next(ErrorHandler.AuthError('Invalid token'));
+    }
+    if (error instanceof jwt.TokenExpiredError) {
+      return next(ErrorHandler.AuthError('Token expired'));
+    }
+    return next(ErrorHandler.AuthError('Authentication failed'));
   }
 }

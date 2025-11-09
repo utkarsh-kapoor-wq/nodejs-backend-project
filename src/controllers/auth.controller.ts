@@ -35,16 +35,8 @@ import { LoginSchema, SignupSchema } from '@/utils/validations';
 import { comparePasswords, hashPassword } from '@/utils/helpers';
 import { generateJWTandSetCookie } from '@/utils/jwt_session';
 import logger from '@/core/logger';
+import type { AuthenticatedRequest } from '@/types/auth-request';
 import { env } from '@/env';
-
-// Define authenticated request interface
-interface AuthenticatedRequest extends ExpressRequest {
-  user?: {
-    id: string;
-    email: string;
-    username: string;
-  };
-}
 
 /**
  * Signup Handler
@@ -210,10 +202,27 @@ export const loginHandlerWithValidation = [validate(data => LoginSchema.parse(da
 
 export const logoutHandler = asyncHandler(async (req: AuthenticatedRequest, res: ExpressResponse) => {
   try {
-    // Get user info from request (if available from auth middleware)
+    // Get user info from request (should be set by auth middleware)
     const user = req.user;
 
-    // Clear the JWT cookie by setting it to expire immediately
+    // If no user in request, it means auth middleware didn't set it (no valid token)
+    if (!user) {
+      logger.warn('Logout attempt without valid authentication', {
+        path: req.path,
+        timestamp: new Date().toISOString(),
+      });
+
+      // Use the Response.unAuthorized helper from asyncHandler
+      return Response.unAuthorized('No active session to logout');
+    }
+
+    logger.info('User logout initiated', {
+      userId: user.id,
+      email: user.email,
+      timestamp: new Date().toISOString(),
+    });
+
+    // Clear the JWT cookie
     res.clearCookie('token', {
       httpOnly: true,
       secure: env.NODE_ENV === 'production',
@@ -221,18 +230,11 @@ export const logoutHandler = asyncHandler(async (req: AuthenticatedRequest, res:
       path: '/',
     });
 
-    // Log the logout event
-    if (user) {
-      logger.info('User logged out successfully', {
-        userId: user.id,
-        email: user.email,
-        timestamp: new Date().toISOString(),
-      });
-    } else {
-      logger.info('Logout attempt (no active session)', {
-        timestamp: new Date().toISOString(),
-      });
-    }
+    logger.info('User logged out successfully', {
+      userId: user.id,
+      email: user.email,
+      timestamp: new Date().toISOString(),
+    });
 
     return Response.success(null, 'Logged out successfully');
   } catch (error) {
@@ -243,6 +245,11 @@ export const logoutHandler = asyncHandler(async (req: AuthenticatedRequest, res:
     // Even if there's an error, we should still clear the cookie
     res.clearCookie('token');
 
-    return Response.success(null, 'Logged out successfully');
+    // If it's an auth-related error, return 401
+    if (error instanceof ErrorHandler && error.statusCode === 401) {
+      return Response.unAuthorized('Invalid or expired token');
+    }
+
+    throw error; // Re-throw other errors to be handled by asyncHandler
   }
 });

@@ -164,6 +164,14 @@ export const Response = {
   }),
 
   /**
+   * Unauthorized response (401)
+   */
+  unAuthorized: (message = 'Unauthorized'): RouteResult<undefined> => ({
+    message,
+    statusCode: 401,
+  }),
+
+  /**
    * Success with pagination metadata
    */
   paginated: <T>(data: T[], total: number, page: number, limit: number, message = 'Success'): RouteResult<T[]> => ({

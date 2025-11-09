@@ -1,6 +1,7 @@
 import express, { type Router } from 'express';
 import { loginHandlerWithValidation, logoutHandler, signupHandlerWithValidation } from '@/controllers/auth.controller';
 import { sendVerificationEmailWithValidation, verifyAccountWithValidation } from '@/controllers/verify.controller';
+import { authMiddleware } from '@/middlewares/auth.middleware';
 
 const router: Router = express.Router();
 
@@ -52,6 +53,32 @@ const router: Router = express.Router();
  *                       type: string
  *                       format: email
  *                       example: john@example.com
+ *       400:
+ *         description: Invalid request body
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Invalid request body
+ *       409:
+ *         description: Conflict
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success:
+ *                   type: boolean
+ *                   example: false
+ *                 message:
+ *                   type: string
+ *                   example: Email already in use
  */
 router.route('/signup').post(signupHandlerWithValidation);
 
@@ -298,6 +325,6 @@ router.route('/verify-account').post(verifyAccountWithValidation);
  *                   type: string
  *                   example: Internal Server Error
  */
-router.route('/logout').post(logoutHandler);
+router.route('/logout').post(authMiddleware, logoutHandler);
 
 export default router;

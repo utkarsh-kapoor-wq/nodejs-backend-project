@@ -39,25 +39,7 @@ import { CreateTaskSchema, UpdateTaskSchema, TaskQuerySchema, TaskParamsSchema }
 import logger from '@/core/logger';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import type { AuthenticatedRequest } from '@/types/auth-request';
-/**
- * Middleware to verify user authentication and email verification
- * This should be applied to all task routes before the actual handlers
- */
-const verifyUserAccess = (req: AuthenticatedRequest) => {
-  if (!req.user) {
-    throw ErrorHandler.AuthError('Authentication required');
-  }
-
-  if (!req.user.isVerified) {
-    throw ErrorHandler.Forbidden('Email verification required to access tasks');
-  }
-
-  logger.info('User access verified', {
-    userId: req.user.id,
-    email: req.user.email,
-    action: 'task_access',
-  });
-};
+import { verifyUserAccess } from '@/middlewares/verifyUserAccess';
 
 /**
  * Create New Task Handler
