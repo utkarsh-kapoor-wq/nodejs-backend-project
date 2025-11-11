@@ -118,3 +118,7 @@ export const verifyAccountHandler = asyncHandler(async (req: ExpressRequest, _re
 });
 
 export const verifyAccountWithValidation = [validate(data => verifyOtpSchema.parse(data)), verifyAccountHandler];
+
+export const googleVerificationHandler = asyncHandler(async (_req: ExpressRequest, _res: ExpressResponse) => {
+  return Response.success(null, 'Google account verified successfully');
+});
