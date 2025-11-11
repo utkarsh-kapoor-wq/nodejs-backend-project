@@ -307,7 +307,7 @@ router.route('/verify-account').post(verifyAccountWithValidation);
  *                   type: string
  *                   example: Google verification not implemented yet
  */
-router.route('/verify-account/google-verification').post(googleVerificationHandler);
+router.route('/verify-account/google-verification').post(authMiddleware, googleVerificationHandler);
 
 /**
  * Google OAuth callback route

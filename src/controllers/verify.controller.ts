@@ -28,6 +28,8 @@ import ErrorHandler from '@/utils/errorHandler';
 import { users } from '@/db/schemas/user.schema';
 import { db } from '@/db';
 import { otpCodes } from '@/db/schemas';
+import type { AuthenticatedRequest } from '@/types/auth-request';
+import { verifyUserAccess } from '@/middlewares/verifyUserAccess';
 
 /**
  * Verify Account Handler
@@ -119,8 +121,27 @@ export const verifyAccountHandler = asyncHandler(async (req: ExpressRequest, _re
 
 export const verifyAccountWithValidation = [validate(data => verifyOtpSchema.parse(data)), verifyAccountHandler];
 
-export const googleVerificationHandler = asyncHandler(async (_req: ExpressRequest, _res: ExpressResponse) => {
-  return Response.success(null, 'Google account verified successfully');
+export const googleVerificationHandler = asyncHandler(async (req: AuthenticatedRequest, _res: ExpressResponse) => {
+  verifyUserAccess(req);
+  const { email } = req.user!;
+
+  // Build state to include the email (base64 encoded JSON)
+  const state = Buffer.from(JSON.stringify({ email, ts: Date.now() })).toString('base64');
+
+  const params = new URLSearchParams({
+    client_id: process.env.GOOGLE_CLIENT_ID,
+    redirect_uri: process.env.GOOGLE_REDIRECT_URI,
+    response_type: 'code',
+    scope: process.env.GOOGLE_OAUTH_SCOPE,
+    access_type: 'offline',
+    include_granted_scopes: 'true',
+    state,
+    prompt: 'consent',
+  } as Record<string, string>);
+
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+
+  return Response.success({ url }, 'Google OAuth URL generated');
 });
 
 export const googleOAuthCallbackHandler = asyncHandler(async (req: ExpressRequest, _res: ExpressResponse) => {
