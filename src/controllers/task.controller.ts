@@ -40,7 +40,11 @@ import logger from '@/core/logger';
 import { authMiddleware } from '@/middlewares/auth.middleware';
 import type { AuthenticatedRequest } from '@/types/auth-request';
 import { verifyUserAccess } from '@/middlewares/verifyUserAccess';
-import getGoogleConnectionStatus from '@/utils/googleStatus';
+import getGoogleConnectionStatus, {
+  createCalendarEventForTask,
+  updateCalendarEventForTask,
+  deleteCalendarEventForTask,
+} from '@/utils/googleStatus';
 
 /**
  * Create New Task Handler
@@ -103,7 +107,9 @@ export const createTaskHandler = asyncHandler(async (req: AuthenticatedRequest) 
       status: status ?? 'pending',
       startTime: startTime ? new Date(startTime) : null,
       endTime: endTime ? new Date(endTime) : null,
-      calendarEventId: calendarEventId ?? null,
+      // Always initialize calendarEventId as null on create. We'll sync with Google and
+      // persist the real calendar event id returned by Google.
+      calendarEventId: null,
     })
     .returning();
 
@@ -117,8 +123,34 @@ export const createTaskHandler = asyncHandler(async (req: AuthenticatedRequest) 
     title: newTask.title,
   });
 
-  getGoogleConnectionStatus(req);
-  return Response.created(newTask, 'Task created successfully');
+  // Attempt to sync to Google Calendar if user has connected Google
+  let calendarSynced = false;
+  let calendarSyncMessage = 'Not attempted';
+
+  try {
+    const eventId = await createCalendarEventForTask(req.user.id, newTask as any);
+    if (eventId) {
+      // ensure response contains calendarEventId
+      newTask.calendarEventId = eventId;
+      calendarSynced = true;
+      calendarSyncMessage = 'Task created in Google Calendar';
+    } else {
+      calendarSynced = false;
+      calendarSyncMessage = 'Task not synced to Google Calendar (no token or API error)';
+    }
+  } catch (err) {
+    // don't block task creation on calendar errors
+    logger.warn('Google calendar create failed for new task', { err, taskId: newTask.id, userId: req.user.id });
+    calendarSynced = false;
+    calendarSyncMessage = 'Google calendar create failed (see server logs)';
+  }
+
+  return {
+    data: newTask,
+    message: 'Task created successfully',
+    statusCode: 201,
+    meta: { calendarSynced, calendarSyncMessage },
+  };
 });
 
 /**
@@ -360,8 +392,32 @@ export const updateTaskHandler = asyncHandler(async (req: AuthenticatedRequest) 
     updatedFields: Object.keys(updates),
   });
 
-  getGoogleConnectionStatus(req);
-  return Response.success(updatedTask, 'Task updated successfully');
+  // Attempt to sync update to Google Calendar if user has connected Google
+  let calendarSynced = false;
+  let calendarSyncMessage = 'Not attempted';
+
+  try {
+    const eventId = await updateCalendarEventForTask(req.user.id, updatedTask as any);
+    if (eventId) {
+      updatedTask.calendarEventId = eventId;
+      calendarSynced = true;
+      calendarSyncMessage = 'Task updated in Google Calendar';
+    } else {
+      calendarSynced = false;
+      calendarSyncMessage = 'Task not synced to Google Calendar (no token or API error)';
+    }
+  } catch (err) {
+    logger.warn('Google calendar update failed for updated task', { err, taskId: updatedTask.id, userId: req.user.id });
+    calendarSynced = false;
+    calendarSyncMessage = 'Google calendar update failed (see server logs)';
+  }
+
+  return {
+    data: updatedTask,
+    message: 'Task updated successfully',
+    statusCode: 200,
+    meta: { calendarSynced, calendarSyncMessage },
+  };
 });
 
 /**
@@ -386,7 +442,7 @@ export const deleteTaskHandler = asyncHandler(async (req: AuthenticatedRequest) 
 
   // Check if task exists and belongs to user
   const [existingTask] = await db
-    .select({ id: tasks.id, title: tasks.title })
+    .select({ id: tasks.id, title: tasks.title, calendarEventId: tasks.calendarEventId })
     .from(tasks)
     .where(and(eq(tasks.id, id), eq(tasks.userId, req.user.id)))
     .limit(1);
@@ -411,8 +467,31 @@ export const deleteTaskHandler = asyncHandler(async (req: AuthenticatedRequest) 
     title: existingTask.title,
   });
 
-  getGoogleConnectionStatus(req);
-  return Response.success('Task deleted successfully');
+  // Attempt to delete associated calendar event when deleting task
+  let calendarSynced = false;
+  let calendarSyncMessage = 'Not attempted';
+
+  try {
+    const deleted = await deleteCalendarEventForTask(req.user.id, existingTask.calendarEventId);
+    if (deleted) {
+      calendarSynced = true;
+      calendarSyncMessage = 'Calendar event deleted';
+      logger.info('Deleted calendar event for task', { taskId: existingTask.id, userId: req.user.id });
+    } else {
+      calendarSynced = false;
+      calendarSyncMessage = 'Calendar event not deleted (no token or API error)';
+    }
+  } catch (err) {
+    logger.warn('Google calendar delete failed for task', { err, taskId: existingTask.id, userId: req.user.id });
+    calendarSynced = false;
+    calendarSyncMessage = 'Google calendar delete failed (see server logs)';
+  }
+
+  return {
+    message: 'Task deleted successfully',
+    statusCode: 200,
+    meta: { calendarSynced, calendarSyncMessage },
+  };
 });
 
 /**
